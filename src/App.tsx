@@ -1,16 +1,18 @@
-import { Employees } from './components/features/employees/Employees'
-import { Footer } from './components/layout/footer/Footer'
-import { Header } from './components/layout/header/Header'
+import { Routes, Route } from "react-router-dom";
+import { Layout } from "./components/layout/Layout";
+import { Employees } from "./components/features/employees/Employees";
+import { Organization } from "./components/features/organization/Organization";
 
 function App() {
-
-  return (
-    <>
-      <Header />
-      <Employees />
-      <Footer />
-    </>
-  )
+    return (
+        <Routes>
+            <Route path="/" element={<Layout />}>
+                <Route index element={<Employees />} />
+                <Route path="employees" element={<Employees />} />
+                <Route path="organization" element={<Organization />} />
+            </Route>
+        </Routes>
+    );
 }
 
-export default App
+export default App;

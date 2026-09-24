@@ -1,0 +1,21 @@
+.roleList {
+    list-style: none;
+    padding: 0;
+}
+
+.roleItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #444;
+}
+
+.name {
+    font-weight: 600;
+}
+
+.role {
+    color: #aaa;
+    font-style: italic;
+}
