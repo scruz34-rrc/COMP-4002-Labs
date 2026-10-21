@@ -1,145 +1,147 @@
-import { useState } from "react";
-import { departmentData } from "../../../data/departments";
+// src/components/features/employees/Employees.tsx
+import { useEffect, useState } from "react";
+import { useFormInput } from "../../../hooks/useFormInput";
+import * as EmployeeService from "../../../services/employeeService";
+import * as EmployeeRepo from "../../../apis/employeeRepo";
+import type { Department } from "../../../types/department";
 import styles from "../Features.module.css";
-import { Guid } from "guid-typescript";
 
 export function Employees() {
-    const [firstNameValue, setFirstNameValue] = useState("");
-    const [lastNameValue, setLastNameValue] = useState("");
-    const [formMessages, setFormMessages] = useState<string[]>([])
-    const [departmentInput, setDepartmentInput] = useState("");
-    const [departmentList, setDepartmentList] = useState(departmentData);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
 
-    const departmentListElement = departmentList.map((d) => {
-        return <section key={d.id}>
-            <h2>{d.name}</h2>
-            <ul className={styles.employees}>
-                {d.employees.map((e) => <li key={e.id}>
-                    {e.firstName} {e.lastName}
-                </li>)}
-            </ul>
-        </section>
+  const firstNameInput = useFormInput("");
+  const lastNameInput = useFormInput("");
+  const departmentInput = useFormInput("");
+
+  useEffect(() => {
+    setDepartments(EmployeeRepo.getDepartments());
+  }, []);
+
+  const handleEmployeeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormErrors([]);
+
+    const firstNameValidation = firstNameInput.validate((value) => {
+      if (value.trim().length < 3) {
+        return ["First names must have at least three characters."];
+      }
+      return null;
     });
 
-    const departmentDropdownInput = (
-            <select
-                value={departmentInput}
-                onChange={e => setDepartmentInput(e.target.value)}
-            >
-                <option value="">-- Select Department --</option>
-                {
-                    departmentData.map(d => {
-                        return(
-                            <option 
-                                key={"opt" + d.id} 
-                                value={d.name}>
-                                    {d.name}
-                                </option>
-                        );
-                    })
-                }
-            </select>
-    );
+    const departmentValidation = departmentInput.validate((value) => {
+      const exists = departments.some((d) => d.name === value);
+      if (!exists) {
+        return ["Employee must be in an existing department."];
+      }
+      return null;
+    });
 
-    const handleEmployeeSubmit = () => {
-        let isValid = true;
-        setFormMessages([]);
-
-        if(firstNameValue.trim().length < 3) {
-            isValid = false;
-            setFormMessages(s => {
-                return [...s, "First names must have at least three characters."]
-            });
-        }
-
-        if(!departmentData.find(d => d.name === departmentInput)) {
-            isValid = false;
-
-            setFormMessages(s => {
-                return [...s, "Employee must be in an existing department."]
-            })
-        }
-
-        if(isValid) {
-            setFirstNameValue("");
-            setLastNameValue("");
-
-            setDepartmentList(oldState => oldState.map(d => {
-                if(d.name !== departmentInput) {
-                    return d;
-                } else {
-                    // must create a deep clone of the department object being updated
-                    return {
-                        id: d.id,
-                        name: d.name,
-                        employees: [...d.employees,
-                            {
-                                id: Guid.create().toString(),
-                                firstName: firstNameValue,
-                                lastName: lastNameValue
-                            }
-
-                        ]
-                    };
-                }
-            }));
-        }
+    if (!firstNameValidation.isValid || !departmentValidation.isValid) {
+      return;
     }
 
-    return(<>
-        <section>
-            <h1>Employees by Department</h1>
-            {departmentListElement}
-        </section>
-        <section className={styles.input}>
-            <h2>Add New Employee</h2>
-            <form onSubmit={e => {
-                e.preventDefault();
-                handleEmployeeSubmit();
-                }
-            }>
-                <div>
-                    <label>
-                        First Name: <input 
-                            name="firstName" 
-                            type="text" 
-                            value = {firstNameValue}
-                            onChange={e => setFirstNameValue(e.target.value)}
-                        /> 
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        Last Name: <input 
-                            name="lastName" 
-                            type="text" 
-                            value = {lastNameValue}
-                            onChange={e => setLastNameValue(e.target.value)}
-                            />
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        Department: 
-                            {departmentDropdownInput}
-                    </label>
-                </div>
-                <div>
-                    {
-                        formMessages.map(message => {
-                            return <p 
-                                className={styles.error}
-                                >
-                                    {message}
-                                </p>    
-                            }
-                        )
-                    }
-                </div>
-                <div>
-                    <input type="submit" />
-                </div>
-            </form>
-        </section>
-    </>);
+    const result = await EmployeeService.createEmployee(
+      firstNameInput.value,
+      lastNameInput.value,
+      departmentInput.value
+    );
+
+    if (result.success) {
+      setDepartments(EmployeeRepo.getDepartments());
+      firstNameInput.setValue("");
+      lastNameInput.setValue("");
+      departmentInput.setValue("");
+      firstNameInput.setMessages([]);
+      departmentInput.setMessages([]);
+    } else {
+      setFormErrors(result.errors);
+    }
+  };
+
+  const departmentListElement = departments.map((d) => (
+    <section key={d.id}>
+      <h2>{d.name}</h2>
+      <ul className={styles.employees}>
+        {d.employees.map((e) => (
+          <li key={e.id}>
+            {e.firstName} {e.lastName}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ));
+
+  const departmentDropdownInput = (
+    <select
+      value={departmentInput.value}
+      onChange={(e) => departmentInput.setValue(e.target.value)}
+    >
+      <option value="">-- Select Department --</option>
+      {departments.map((d) => (
+        <option key={"opt" + d.id} value={d.name}>
+          {d.name}
+        </option>
+      ))}
+    </select>
+  );
+
+  return (
+    <>
+      <section>
+        <h1>Employees by Department</h1>
+        {departmentListElement}
+      </section>
+      <section className={styles.input}>
+        <h2>Add New Employee</h2>
+        <form onSubmit={handleEmployeeSubmit}>
+          <div>
+            <label>
+              First Name:{" "}
+              <input
+                name="firstName"
+                type="text"
+                value={firstNameInput.value}
+                onChange={(e) => firstNameInput.setValue(e.target.value)}
+              />
+            </label>
+            {firstNameInput.messages.map((msg) => (
+              <p className={styles.error} key={msg}>
+                {msg}
+              </p>
+            ))}
+          </div>
+          <div>
+            <label>
+              Last Name:{" "}
+              <input
+                name="lastName"
+                type="text"
+                value={lastNameInput.value}
+                onChange={(e) => lastNameInput.setValue(e.target.value)}
+              />
+            </label>
+          </div>
+          <div>
+            <label>Department: {departmentDropdownInput}</label>
+            {departmentInput.messages.map((msg) => (
+              <p className={styles.error} key={msg}>
+                {msg}
+              </p>
+            ))}
+          </div>
+          <div>
+            {formErrors.map((msg) => (
+              <p className={styles.error} key={msg}>
+                {msg}
+              </p>
+            ))}
+          </div>
+          <div>
+            <input type="submit" />
+          </div>
+        </form>
+      </section>
+    </>
+  );
 }
