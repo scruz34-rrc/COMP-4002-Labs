@@ -13,20 +13,30 @@ export async function createRole(
   firstName: string,
   lastName: string
 ): Promise<Role> {
-  const role = roles.find((r) => r.title === title);
-  if (!role) {
-    throw new Error("Role not found");
-  }
-  if (role.employee) {
-    throw new Error("Role is already occupied");
+  const existing = roles.find((r) => r.title === title);
+
+  if (existing) {
+    if (existing.employee) {
+      throw new Error("Role is already occupied");
+    }
+    existing.employee = {
+      id: Guid.create().toString(),
+      firstName,
+      lastName,
+    };
+    return existing;
   }
 
-  const newEmployee = {
+  const newRole: Role = {
     id: Guid.create().toString(),
-    firstName,
-    lastName,
+    title,
+    employee: {
+      id: Guid.create().toString(),
+      firstName,
+      lastName,
+    },
   };
 
-  role.employee = newEmployee;
-  return role;
+  roles.push(newRole);
+  return newRole;
 }

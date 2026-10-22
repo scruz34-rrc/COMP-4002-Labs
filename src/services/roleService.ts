@@ -21,9 +21,7 @@ export async function createRole(
   const roles = RoleRepo.getRoles();
   const role = roles.find((r) => r.title === title);
 
-  if (!role) {
-    errors.push("Role must exist.");
-  } else if (role.employee) {
+  if (role && role.employee) {
     errors.push("Role is already occupied.");
   }
 
